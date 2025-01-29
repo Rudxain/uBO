@@ -319,7 +319,8 @@ onBroadcast(msg => {
         cnameIgnoreRootDocument: µbhs.cnameIgnoreRootDocument,
         cnameMaxTTL: µbhs.cnameMaxTTL,
         cnameReplayFullURL: µbhs.cnameReplayFullURL,
-        cnameUncloakProxied: µbhs.cnameUncloakProxied,
+        dnsCacheTTL: µbhs.dnsCacheTTL,
+        dnsResolveEnabled: µbhs.dnsResolveEnabled,
     });
 });
 
@@ -434,7 +435,7 @@ onBroadcast(msg => {
                 try {
                     const url = new URL(prefix);
                     if ( url.hostname.length > 0 ) { return url.href; }
-                } catch(_) {
+                } catch {
                 }
             }).filter(prefix => prefix !== undefined);
     }
@@ -607,6 +608,7 @@ onBroadcast(msg => {
         const url = new URL(options.docURL);
         comment = '! ' +
             this.hiddenSettings.autoCommentFilterTemplate
+                .replace('{{isodate}}', d.toISOString().split('T')[0])
                 .replace('{{date}}', d.toLocaleDateString(undefined, { dateStyle: 'medium' }))
                 .replace('{{time}}', d.toLocaleTimeString())
                 .replace('{{hostname}}', url.hostname)
@@ -1007,12 +1009,12 @@ onBroadcast(msg => {
         ubolog('loadFilterLists() Start');
         t0 = Date.now();
         loadedListKeys.length = 0;
-        loadingPromise = Promise.all([
-            this.getAvailableLists().then(lists => onFilterListsReady(lists)),
-            this.loadRedirectResources().then(( ) => {
-                ubolog(`loadFilterLists() Redirects/scriptlets ready at ${elapsed()}`);
-            }),
-        ]).then(( ) => {
+        loadingPromise = this.loadRedirectResources().then(( ) => {
+            ubolog(`loadFilterLists() Redirects/scriptlets ready at ${elapsed()}`);
+            return this.getAvailableLists();
+        }).then(lists => {
+            return onFilterListsReady(lists)
+        }).then(( ) => {
             onDone();
         });
         return loadingPromise;
